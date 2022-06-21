@@ -6,8 +6,6 @@ from __future__ import annotations
 from collections.abc import Sequence, Iterator
 from itertools import repeat
 from enum import Enum, unique
-from argparse import ArgumentParser, FileType
-from cmd import Cmd
 
 
 __version__ = "0.3.0"
@@ -15,92 +13,9 @@ __author__  = "Eric Niklas Wolf"
 __email__   = "eric_niklas.wolf@mailbox.tu-dresden.de"
 __all__ = (
     "Instruction",
-    "Machine"
+    "Machine",
+    "repl"
 )
-
-ARGUMENT_PARSER = ArgumentParser(description=__doc__)
-ARGUMENT_PARSER.add_argument(
-    "-v",
-    "--version",
-    action="version",
-    version=f"%(prog)s {__version__}"
-)
-ARGUMENT_PARSER.add_argument(
-    "file",
-    nargs="?",
-    type=FileType("r"),
-    default=None,
-    help="path to program which shall be executed, omit for interactive REPL"
-)
-
-
-class AM0Repl(Cmd):
-    """interactive REPL"""
-
-    machine: Machine
-
-    def __init__(self, machine: Machine, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.machine = machine
-        self.prompt = "AM0 >> "
-
-    def emptyline(self) -> bool:
-        """ignore empty lines"""
-        return False
-
-    def request_input(self, question: str) -> int:
-        """request input from the user"""
-        self.stdout.write(question)
-        self.stdout.flush()
-        return int(self.stdin.readline())
-
-    def do_exec(self, arg: str) -> bool:
-        """execute an instruction"""
-        try:
-            instruction = Instruction.parse(arg)
-        except KeyError:
-            self.stdout.write("Error: invalid instruction\n")
-        except ValueError:
-            self.stdout.write("Error: invalid payload\n")
-        else:
-            try:
-                output = self.machine.execute_instruction(instruction, map(self.request_input, repeat("Input: ")))
-            except KeyError:
-                self.stdout.write("Error: invalid memory address\n")
-            except ValueError:
-                self.stdout.write("Error: invalid input\n")
-            except IndexError:
-                self.stdout.write("Error: invalid stack size\n")
-            else:
-                if output is not None:
-                    self.stdout.write(f"Output: {output}\n")
-        return False
-
-    def do_reset(self, _) -> bool:
-        """reset the machine"""
-        self.machine.reset()
-        return False
-
-    def do_status(self, _) -> bool:
-        """print the current status of the machine"""
-        memory = "\n".join(f"\t{key} := {value}" for key, value in self.machine.memory.items())
-        self.stdout.write(f"Counter: {self.machine.counter}\n")
-        self.stdout.write(f"Stack: {self.machine.stack}\n")
-        self.stdout.write(f"Memory:\n{memory}\n")
-        return False
-
-    def default(self, line: str) -> None:
-        """print an error"""
-        self.stdout.write(f"*** Unknown command: {line}\n")
-
-    def do_EOF(self, arg: str) -> bool:
-        """exit the repl"""
-        return self.do_exit(arg)
-
-    def do_exit(self, _) -> bool:
-        """exit the repl"""
-        self.stdout.write("Exiting REPL...\n")
-        return True
 
 
 @unique
@@ -252,13 +167,3 @@ class Machine:
         self.counter = 0
         self.stack.clear()
         self.memory.clear()
-
-
-if __name__ == "__main__":
-    args = ARGUMENT_PARSER.parse_args()
-    machine = Machine.default()
-    if args.file is None:
-        AM0Repl(machine).cmdloop("Welcome the the AM0 REPL, type 'help' for help")
-    else:
-        program = tuple(Instruction.parse_program(args.file.read()))
-        machine.execute_interactive(program)
