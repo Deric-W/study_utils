@@ -3,23 +3,19 @@
 """Simple virtual machine for the AM0 instruction set"""
 
 from __future__ import annotations
-from collections.abc import Sequence, Iterator
-from itertools import repeat
+from collections.abc import Mapping, Iterator
 from enum import Enum, unique
+from . import AbstractEnumMeta, AbstractInstruction, AbstractMachine
 
 
-__version__ = "0.3.0"
-__author__  = "Eric Niklas Wolf"
-__email__   = "eric_niklas.wolf@mailbox.tu-dresden.de"
 __all__ = (
     "Instruction",
-    "Machine",
-    "repl"
+    "Machine"
 )
 
 
 @unique
-class Instruction(Enum):
+class Instruction(AbstractInstruction[tuple["Instruction", int]], Enum, metaclass=AbstractEnumMeta):
     """AM0 instruction"""
     ADD   = 1
     MUL   = 2
@@ -71,28 +67,38 @@ class Instruction(Enum):
         return self.value > 11
 
 
-class Machine:
+class Machine(AbstractMachine[tuple[Instruction, int]]):
     """machine for executing AM0 instructions"""
 
-    __slots__ = ("counter", "stack", "memory")
-
-    counter: int
+    __slots__ = ("stack", "memory", "input")
 
     stack: list[int]
 
     memory: dict[int, int]
 
-    def __init__(self, counter: int, stack: list[int], memory: dict[int, int]) -> None:
+    input: Iterator[int]
+
+    def __init__(self, counter: int, stack: list[int], memory: dict[int, int], input: Iterator[int]) -> None:
         self.counter = counter
         self.stack = stack
         self.memory = memory
+        self.input = input
 
     @classmethod
-    def default(cls) -> Machine:
+    def default(cls, input: Iterator[int]) -> Machine:
         """create an instance with default values"""
-        return cls(0, [], {})
+        return cls(1, [], {}, input)
 
-    def execute_instruction(self, instruction: tuple[Instruction, int], input: Iterator[int]) -> int | None:
+    def status(self) -> Mapping[str, object]:
+        """return an object mapping values to visualisations"""
+        memory = "\n" + "\n".join(f"\t{key} := {value}" for key, value in self.memory.items())
+        return {
+            "Counter": self.counter,
+            "Stack": self.stack,
+            "Memory": memory
+        }
+
+    def execute_instruction(self, instruction: tuple[Instruction, int]) -> int | None:
         """execute an instruction, returning the output if produced"""
         value = None
         match instruction:
@@ -143,27 +149,14 @@ class Machine:
             case (Instruction.WRITE, n):
                 value = self.memory[n]
             case (Instruction.READ, n):
-                self.memory[n] = next(input)
+                self.memory[n] = next(self.input)
             case i:
                 raise ValueError(f"invalid instruction: '{i}'")
         self.counter += 1
         return value
 
-    def execute_program(self, program: Sequence[tuple[Instruction, int]], input: Iterator[int]) -> Iterator[int]:
-        """execute a program, yielding occuring output"""
-        self.counter = 0
-        while self.counter < len(program):
-            output = self.execute_instruction(program[self.counter], input)
-            if output is not None:
-                yield output
-
-    def execute_interactive(self, program: Sequence[tuple[Instruction, int]]) -> None:
-        """execute a program with interactive input and output"""
-        for output in self.execute_program(program, map(int, map(input, repeat("Input: ")))):
-            print(f"Output: {output}")
-
     def reset(self) -> None:
         """reset the machine to the default state"""
-        self.counter = 0
+        self.counter = 1
         self.stack.clear()
         self.memory.clear()

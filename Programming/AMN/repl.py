@@ -1,47 +1,47 @@
 #!/usr/bin/python3
 
-"""AM0 REPL"""
+"""AMN REPL"""
 
-from itertools import repeat
+from __future__ import annotations
 from cmd import Cmd
-from . import Instruction, Machine
+from typing import Type, TypeVar, Generic
+from . import AbstractInstruction, AbstractMachine
 
 __all__ = (
-    "AM0Repl",
+    "REPL",
 )
 
+T = TypeVar("T")
 
-class AM0Repl(Cmd):
+
+class REPL(Generic[T], Cmd):
     """interactive REPL"""
 
-    machine: Machine
+    instruction: Type[AbstractInstruction[T]]
 
-    def __init__(self, machine: Machine, *args, **kwargs):
+    machine: AbstractMachine[T]
+
+    def __init__(self, instruction: Type[AbstractInstruction[T]], machine: AbstractMachine[T], *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.instruction = instruction
         self.machine = machine
-        self.prompt = "AM0 >> "
+        self.prompt = "AMN >> "
 
     def emptyline(self) -> bool:
         """ignore empty lines"""
         return False
 
-    def request_input(self, question: str) -> int:
-        """request input from the user"""
-        self.stdout.write(question)
-        self.stdout.flush()
-        return int(self.stdin.readline())
-
     def do_exec(self, arg: str) -> bool:
         """execute an instruction"""
         try:
-            instruction = Instruction.parse(arg)
+            instruction = self.instruction.parse(arg)
         except KeyError:
             self.stdout.write("Error: invalid instruction\n")
         except ValueError:
             self.stdout.write("Error: invalid payload\n")
         else:
             try:
-                output = self.machine.execute_instruction(instruction, map(self.request_input, repeat("Input: ")))
+                output = self.machine.execute_instruction(instruction)
             except KeyError:
                 self.stdout.write("Error: invalid memory address\n")
             except ValueError:
@@ -60,10 +60,8 @@ class AM0Repl(Cmd):
 
     def do_status(self, _) -> bool:
         """print the current status of the machine"""
-        memory = "\n".join(f"\t{key} := {value}" for key, value in self.machine.memory.items())
-        self.stdout.write(f"Counter: {self.machine.counter}\n")
-        self.stdout.write(f"Stack: {self.machine.stack}\n")
-        self.stdout.write(f"Memory:\n{memory}\n")
+        for key, value in self.machine.status().items():
+            self.stdout.write(f"{key}: {value}\n")
         return False
 
     def default(self, line: str) -> None:

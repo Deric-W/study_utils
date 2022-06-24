@@ -3,8 +3,10 @@
 """Execute the module"""
 
 from argparse import ArgumentParser, FileType
-from . import Instruction, Machine, __doc__, __version__
-from .repl import AM0Repl
+from itertools import repeat
+from . import __doc__, __version__
+from .am0 import Instruction, Machine
+from .repl import REPL
 
 ARGUMENT_PARSER = ArgumentParser(description=__doc__)
 ARGUMENT_PARSER.add_argument(
@@ -23,9 +25,11 @@ ARGUMENT_PARSER.add_argument(
 
 if __name__ == "__main__":
     args = ARGUMENT_PARSER.parse_args()
-    machine = Machine.default()
+    machine = Machine.default(map(int, map(input, repeat("Input: "))))
     if args.file is None:
-        AM0Repl(machine).cmdloop("Welcome the the AM0 REPL, type 'help' for help")
+        REPL(Instruction, machine).cmdloop("Welcome the the AM0 REPL, type 'help' for help")
     else:
         program = tuple(Instruction.parse_program(args.file.read()))
-        machine.execute_interactive(program)
+        for output in machine.execute_program(program):
+            if output is not None:
+                print(f"Output: {output}")
