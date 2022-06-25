@@ -1,12 +1,12 @@
 # Programming
 
-## AM0
+## AMN
 
-The AM0 package implements a simple virtual machine for the AM0 instructions set.
+The AMN package implements a simple virtual machine for the AM0 and AM1 instructions sets.
 
-To use it, simply execute it with `python3 -m AM0 path/to/file.txt` to execute the instructions written in a file.
+To use it, simply execute it with `python3 -m AMN -i <instruction set> path/to/file.txt` to execute the instructions written in a file.
 
-If you want an interactive console just type `python3 -m AM0`.
+If you want an interactive console just omit the file path.
 
 ### Requirements
 
@@ -45,10 +45,10 @@ READ 1
 LOAD 0
 LOAD 1
 GT
-JMC 9
+JMC 10
 LOAD 0
 STORE 2
-JMP 11
+JMP 12
 LOAD 1
 STORE 2
 WRITE 2
