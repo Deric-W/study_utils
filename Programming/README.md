@@ -4,9 +4,9 @@
 
 The AMN package implements a simple virtual machine for the AM0 and AM1 instructions sets.
 
-To use it, simply execute it with `python3 -m AMN -i <instruction set> path/to/file.txt` to execute the instructions written in a file.
+To use it, simply execute it with `python3 -m AMN -i <instruction set> exec path/to/file.txt` to execute the instructions written in a file.
 
-If you want an interactive console just omit the file path.
+If you want an interactive console just use `python3 -m AMN -i <instruction set> repl`.
 
 ### Requirements
 
@@ -17,7 +17,7 @@ Python >= 3.10 is required to use the utility.
 The REPL (read eval print loop) in action:
 
 ```
-python3 -m AM0
+python3 -m AMN -i am0 repl
 Welcome the the AM0 REPL, type 'help' for help
 AM0 >> exec READ 0
 Input: 8
